@@ -3,398 +3,99 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f1115" />
-  <title>모바일 계산기</title>
+  <title>터치 미니게임</title>
   <style>
-    :root{
-      --bg:#0f1115;        /* 배경 */
-      --panel:#151922;     /* 패널 */
-      --key:#1b2130;       /* 키 기본 */
-      --key-accent:#2a3350;/* 기능키 */
-      --key-op:#6b7cff;    /* 연산자 */
-      --text:#e9ecf1;      /* 텍스트 */
-      --muted:#9aa6b2;     /* 보조 텍스트 */
-      --good:#1db954;      /* 확인/완료 */
-      --shadow:0 10px 30px rgba(0,0,0,.35);
-      --radius:22px;
-      --radius-sm:14px;
-    }
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{height:100%}
-    body{
-      margin:0; font-family: system-ui, "Apple SD Gothic Neo", "Noto Sans KR", Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      background: linear-gradient(180deg, #0d0f14, #10131a 40%, #0f1115);
-      color:var(--text);
+    html,body{
+      margin:0; padding:0; height:100%;
+      background:#10131a; color:#fff;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:16px; padding:16px; padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
-    }
-    .app{
-      width:min(480px, 100%);
-      background:var(--panel);
-      border-radius:var(--radius);
-      box-shadow: var(--shadow);
+      font-family:sans-serif;
       overflow:hidden;
-      border:1px solid rgba(255,255,255,.04);
     }
-    header{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:16px 18px; background:linear-gradient(180deg, rgba(255,255,255,.04), transparent);
-      border-bottom:1px solid rgba(255,255,255,.05);
+    #game{
+      position:relative;
+      width:100%; max-width:480px; aspect-ratio:9/16;
+      background:#1a1f2a;
+      border-radius:20px;
+      overflow:hidden;
+      box-shadow:0 8px 24px rgba(0,0,0,.5);
+      touch-action:manipulation;
     }
-    header h1{font-size:16px; margin:0; font-weight:600; letter-spacing:.2px; color:var(--muted)}
-    header .actions{display:flex; gap:8px}
-    header button{
-      background:var(--key); color:var(--text); border:none; border-radius:12px; padding:10px 12px; font-size:14px; cursor:pointer;
+    .target{
+      position:absolute;
+      width:80px; height:80px;
+      background:#6b7cff;
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      color:#0f1120; font-size:22px; font-weight:bold;
+      user-select:none;
     }
-
-    .display{
-      padding:18px; padding-top:28px; min-height:136px; display:flex; flex-direction:column; gap:10px; justify-content:flex-end;
-      background: radial-gradient(120% 100% at 100% 0%, #1c2231 0%, transparent 60%) no-repeat;
+    #score{
+      position:absolute; top:10px; left:10px; right:10px;
+      display:flex; justify-content:space-between; font-size:18px;
+      color:#cdd2f8;
     }
-    .expr{font-size:18px; color:var(--muted); text-align:right; word-break:break-all; min-height:22px}
-    .result{font-size:44px; line-height:1.2; text-align:right; font-weight:700; letter-spacing:1px}
-
-    .keyboard{
-      padding:12px; display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; background:linear-gradient(180deg, transparent, rgba(255,255,255,.02));
-    }
-    .key{
-      appearance:none; -webkit-appearance:none;
-      background:var(--key); color:var(--text); border:none; border-radius:18px; padding:18px; font-size:20px; font-weight:600;
-      box-shadow: inset 0 -2px 0 rgba(255,255,255,.05), 0 2px 0 rgba(0,0,0,.2);
-      cursor:pointer; user-select:none;
-    }
-    .key:active{transform:translateY(1px)}
-    .key.fn{background:var(--key-accent); color:#c9d4ff}
-    .key.op{background:var(--key-op); color:#0e1122}
-    .key.equals{background:linear-gradient(180deg, #6b7cff, #7e8bff); color:#0d0f1a;}
-    .key.round{border-radius:40px}
-    .key.sm{padding:14px; font-size:16px; font-weight:600}
-
-    /* 히스토리 */
-    .history{
-      position:fixed; inset:auto 0 0 0; height:62vh; max-height:620px; transform:translateY(105%);
-      transition:transform .35s ease; background:var(--panel); border-top-left-radius:24px; border-top-right-radius:24px; box-shadow:0 -20px 40px rgba(0,0,0,.5);
-      border-top:1px solid rgba(255,255,255,.06); display:flex; flex-direction:column;
-    }
-    .history.open{transform:translateY(0)}
-    .history .grab{width:56px; height:5px; background:#3a4256; border-radius:99px; margin:8px auto}
-    .history header{padding:10px 16px}
-    .history h2{margin:0; font-size:14px; color:var(--muted)}
-    .history-list{flex:1; overflow:auto; padding:8px 12px 16px}
-    .hist-item{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding:12px; background:rgba(255,255,255,.03); border-radius:14px; margin:8px 0}
-    .hist-item .left{color:var(--muted); font-size:12px}
-    .hist-item .right{font-feature-settings:"tnum" 1; font-variant-numeric: tabular-nums; font-weight:700}
-    .hist-item button{background:transparent; color:#9fb2ff; border:none; padding:6px 8px; border-radius:10px; cursor:pointer}
-
-    .footer-note{font-size:12px; color:var(--muted); text-align:center; margin-top:4px}
-
-    @media (max-width:380px){
-      .result{font-size:38px}
-      .key{padding:16px; font-size:18px}
+    #startBtn{
+      padding:14px 20px; background:#6b7cff; border:none; color:#0f1120; font-size:18px; border-radius:14px; cursor:pointer;
+      margin-top:20px;
     }
   </style>
 </head>
 <body>
-  <div class="app" role="application" aria-label="모바일 계산기">
-    <header>
-      <h1>계산기</h1>
-      <div class="actions">
-        <button id="toggleTheme" aria-label="테마 전환">🌗</button>
-        <button id="showHistory" aria-label="히스토리 보기">📜</button>
-      </div>
-    </header>
-    <section class="display" aria-live="polite">
-      <div class="expr" id="expr">0</div>
-      <div class="result" id="result">0</div>
-    </section>
-    <section class="keyboard" role="group" aria-label="키패드">
-      <!-- 1행 -->
-      <button class="key fn sm" data-key="AC" aria-label="모두 지우기 (길게 누르면 히스토리 삭제)">AC</button>
-      <button class="key fn sm" data-key="C" aria-label="하나 지우기">C</button>
-      <button class="key fn sm" data-key="±" aria-label="부호 전환">±</button>
-      <button class="key op sm" data-key="÷" aria-label="나누기">÷</button>
-      <!-- 2행 -->
-      <button class="key" data-key="7">7</button>
-      <button class="key" data-key="8">8</button>
-      <button class="key" data-key="9">9</button>
-      <button class="key op" data-key="×" aria-label="곱하기">×</button>
-      <!-- 3행 -->
-      <button class="key" data-key="4">4</button>
-      <button class="key" data-key="5">5</button>
-      <button class="key" data-key="6">6</button>
-      <button class="key op" data-key="-" aria-label="빼기">−</button>
-      <!-- 4행 -->
-      <button class="key" data-key="1">1</button>
-      <button class="key" data-key="2">2</button>
-      <button class="key" data-key="3">3</button>
-      <button class="key op" data-key="+" aria-label="더하기">+</button>
-      <!-- 5행 -->
-      <button class="key round" style="grid-column: span 2" data-key="0">0</button>
-      <button class="key" data-key=".">.</button>
-      <button class="key equals round" data-key="=" aria-label="계산하기">=</button>
-    </section>
+  <div id="game">
+    <div id="score"><span>점수: <b id="pts">0</b></span><span>시간: <b id="time">30</b>s</span></div>
   </div>
-
-  <!-- 히스토리 패널 -->
-  <aside class="history" id="history">
-    <div class="grab"></div>
-    <header>
-      <h2>최근 계산 기록</h2>
-    </header>
-    <div class="history-list" id="historyList" aria-live="polite"></div>
-  </aside>
-
-  <div class="footer-note">길게 AC 누르면 히스토리가 초기화됩니다. 결과를 탭하면 복사됩니다.</div>
+  <button id="startBtn">게임 시작</button>
 
   <script>
-    const exprEl = document.getElementById('expr');
-    const resultEl = document.getElementById('result');
-    const keys = document.querySelectorAll('.key');
-    const historyPanel = document.getElementById('history');
-    const historyList = document.getElementById('historyList');
-    const showHistoryBtn = document.getElementById('showHistory');
-    const toggleThemeBtn = document.getElementById('toggleTheme');
+    const game = document.getElementById('game');
+    const startBtn = document.getElementById('startBtn');
+    const ptsEl = document.getElementById('pts');
+    const timeEl = document.getElementById('time');
 
-    let expr = '0';
-    let justEvaluated = false;
+    let score=0, time=30, timer, active=false;
 
-    const vibrate = (ms=10)=>{ if (navigator.vibrate) navigator.vibrate(ms); };
-
-    function fmt(n){
-      // 숫자 문자열 또는 숫자를 보기 좋게 포맷 (최대 12 유효자릿수)
-      if (n === 'Error') return n;
-      let num = Number(n);
-      if (!Number.isFinite(num)) return 'Error';
-      // 자잘한 부동소수 오차 보정
-      const rounded = Number.parseFloat(num.toPrecision(12));
-      const abs = Math.abs(rounded);
-      if (abs !== 0 && (abs < 1e-6 || abs >= 1e12)) {
-        return rounded.toExponential(6).replace(/\+/, '');
-      }
-      // 천단위 구분 + 소수점 8자리까지, 불필요한 0 제거
-      let [i, d=''] = rounded.toString().split('.');
-      i = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      if (d) { d = d.replace(/0+$/, ''); }
-      return d ? `${i}.${d}` : i;
+    function spawn(){
+      if(!active) return;
+      const target = document.createElement('div');
+      target.className = 'target';
+      target.textContent = '🎯';
+      const maxX = game.clientWidth-80;
+      const maxY = game.clientHeight-80;
+      target.style.left = Math.random()*maxX + 'px';
+      target.style.top = Math.random()*maxY + 'px';
+      target.addEventListener('click', ()=>{
+        score++;
+        ptsEl.textContent = score;
+        target.remove();
+        spawn();
+      }, {once:true});
+      game.appendChild(target);
     }
 
-    function render(){
-      exprEl.textContent = expr;
-      // 미리보기 결과
-      const preview = safeEval(expr);
-      resultEl.textContent = fmt(preview);
-    }
-
-    function append(token){
-      if (justEvaluated && /[0-9.]/.test(token)){
-        expr = '0';
-      }
-      justEvaluated = false;
-      if (expr === '0' && /[0-9]/.test(token)) {
-        expr = token; return;
-      }
-      // 연산자 중복 방지
-      if (isOp(token) && isOp(expr.slice(-1))) {
-        expr = expr.slice(0, -1) + token; return;
-      }
-      // 소수점 중복 방지: 현재 토큰 덩어리 안에서 체크
-      if (token === '.'){
-        const lastChunk = expr.split(/[-+×÷]/).pop();
-        if (lastChunk.includes('.')) return;
-      }
-      expr += token;
-    }
-
-    function isOp(c){ return ['+','-','×','÷'].includes(c); }
-
-    function safeEval(expression){
-      try{
-        if (!expression || /[^0-9+\-×÷.()% ]/.test(expression)) return '0';
-        const normalized = expression
-          .replace(/×/g,'*')
-          .replace(/÷/g,'/')
-          .replace(/%/g,'/100');
-        // 괄호 균형 간단 체크
-        let bal=0; for (const ch of normalized){ if (ch==='(') bal++; if (ch===')') bal--; if (bal<0) return 'Error'; }
-        if (bal!==0) return 'Error';
-        // 마지막이 연산자면 제거 후 평가(미리보기 방지)
-        const cleaned = /[+\-*/.]$/.test(normalized) ? normalized.slice(0,-1) : normalized;
-        // eslint-disable-next-line no-new-func
-        const out = Function(`"use strict"; return (${cleaned || '0'})`)();
-        return Number.isFinite(out) ? out : 'Error';
-      }catch(e){ return 'Error'; }
-    }
-
-    function evaluate(){
-      const value = safeEval(expr);
-      const display = fmt(value);
-      if (display === 'Error'){ shake(); vibrate(30); return; }
-      addHistory(expr, display);
-      expr = String(value);
-      resultEl.textContent = display;
-      exprEl.textContent = expr;
-      justEvaluated = true;
-      vibrate(8);
-    }
-
-    function clearOne(){
-      if (justEvaluated){ expr='0'; justEvaluated=false; render(); return; }
-      expr = expr.length>1 ? expr.slice(0,-1) : '0';
-    }
-
-    function clearAll(){ expr='0'; justEvaluated=false; }
-
-    function toggleSign(){
-      // 마지막 숫자 블록에 대해 부호 전환
-      const parts = expr.split(/([+\-×÷])/);
-      let i = parts.length-1;
-      while(i>=0 && ['+','-','×','÷'].includes(parts[i])) i--;
-      if (i<0) return;
-      let num = parts[i];
-      if (!num) return;
-      if (num.startsWith('(') && num.endsWith(')')) num = num.slice(1,-1);
-      if (num.startsWith('-')) num = num.slice(1);
-      else num = '-' + num;
-      parts[i] = `(${num})`;
-      expr = parts.join('');
-    }
-
-    function shake(){
-      const el = document.querySelector('.app');
-      el.animate([
-        {transform:'translateX(0)'},
-        {transform:'translateX(-6px)'},
-        {transform:'translateX(6px)'},
-        {transform:'translateX(0)'}
-      ], {duration:180});
-    }
-
-    // 히스토리
-    function loadHistory(){
-      try{ return JSON.parse(localStorage.getItem('calcHistory')||'[]'); }catch{ return []; }
-    }
-    function saveHistory(list){ localStorage.setItem('calcHistory', JSON.stringify(list.slice(-50))); }
-    function addHistory(e, r){
-      const list = loadHistory();
-      list.push({ e, r, t: Date.now() });
-      saveHistory(list);
-      renderHistory();
-    }
-    function renderHistory(){
-      const list = loadHistory().slice().reverse();
-      historyList.innerHTML = list.map(item => `
-        <div class="hist-item">
-          <div class="left">${item.e}</div>
-          <div class="right">${item.r}</div>
-          <button data-reuse='${encodeURIComponent(item.e)}'>재사용</button>
-        </div>`).join('') || '<div class="hist-item"><div class="left">기록 없음</div></div>';
-    }
-
-    // 이벤트 바인딩
-    keys.forEach(k=>{
-      k.addEventListener('click', ()=>{
-        const val = k.dataset.key;
-        switch(val){
-          case 'AC': clearAll(); break;
-          case 'C': clearOne(); break;
-          case '±': toggleSign(); break;
-          case '=': evaluate(); return;
-          default: append(val); break;
+    function start(){
+      score = 0; time = 30; active = true;
+      ptsEl.textContent = score;
+      timeEl.textContent = time;
+      game.querySelectorAll('.target').forEach(t=>t.remove());
+      spawn();
+      timer = setInterval(()=>{
+        time--;
+        timeEl.textContent = time;
+        if(time<=0){
+          end();
         }
-        vibrate(6); render();
-      });
-    });
-
-    // 길게 AC 누르면 히스토리 삭제
-    (function(){
-      const ac = document.querySelector('[data-key="AC"]');
-      let pressTimer;
-      ac.addEventListener('touchstart', start, {passive:true});
-      ac.addEventListener('mousedown', start);
-      ['touchend','touchcancel','mouseup','mouseleave'].forEach(ev=> ac.addEventListener(ev, cancel, {passive:true}));
-      function start(){ pressTimer = setTimeout(()=>{ localStorage.removeItem('calcHistory'); renderHistory(); vibrate(30); }, 700); }
-      function cancel(){ clearTimeout(pressTimer); }
-    })();
-
-    // 결과 탭 -> 복사
-    resultEl.addEventListener('click', async ()=>{
-      const text = resultEl.textContent;
-      try{ await navigator.clipboard.writeText(text); toast('복사됨'); vibrate(8);}catch{ toast('복사 실패'); }
-    });
-
-    // 키보드 입력 지원
-    window.addEventListener('keydown', (e)=>{
-      const k = e.key;
-      if (/^[0-9]$/.test(k)) { append(k); render(); return; }
-      if (k === '.') { append('.'); render(); return; }
-      if (k === 'Enter' || k === '=') { evaluate(); return; }
-      if (k === 'Backspace') { clearOne(); render(); return; }
-      if (['+','-','*','/','%','(',')'].includes(k)){
-        append(k.replace('*','×').replace('/','÷')); render(); return; }
-    });
-
-    // 테마 토글
-    const THEMES = {
-      dark: {
-        bg:'#0f1115', panel:'#151922', key:'#1b2130', keyAccent:'#2a3350', keyOp:'#6b7cff', text:'#e9ecf1', muted:'#9aa6b2'
-      },
-      light: {
-        bg:'#f6f7fb', panel:'#ffffff', key:'#eef0f6', keyAccent:'#e6e9f7', keyOp:'#4b5bff', text:'#0e1320', muted:'#5c6675'
-      }
-    };
-    function setTheme(mode){
-      const t = THEMES[mode]; if(!t) return;
-      document.documentElement.style.setProperty('--bg', t.bg);
-      document.documentElement.style.setProperty('--panel', t.panel);
-      document.documentElement.style.setProperty('--key', t.key);
-      document.documentElement.style.setProperty('--key-accent', t.keyAccent);
-      document.documentElement.style.setProperty('--key-op', t.keyOp);
-      document.documentElement.style.setProperty('--text', t.text);
-      document.documentElement.style.setProperty('--muted', t.muted);
-      localStorage.setItem('theme', mode);
-    }
-    toggleThemeBtn.addEventListener('click', ()=>{
-      const cur = localStorage.getItem('theme')||'dark';
-      setTheme(cur==='dark'?'light':'dark');
-    });
-
-    // 히스토리 열기/닫기 및 스와이프
-    showHistoryBtn.addEventListener('click', ()=>{ historyPanel.classList.toggle('open'); renderHistory(); });
-    let startY=null;
-    historyPanel.addEventListener('touchstart', (e)=>{ startY = e.touches[0].clientY; }, {passive:true});
-    historyPanel.addEventListener('touchmove', (e)=>{
-      if (startY===null) return; const dy = e.touches[0].clientY - startY; if (dy>40) historyPanel.classList.remove('open');
-    }, {passive:true});
-    historyList.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button[data-reuse]');
-      if (!btn) return;
-      expr = decodeURIComponent(btn.dataset.reuse);
-      historyPanel.classList.remove('open');
-      render(); vibrate(8);
-    });
-
-    // 토스트
-    function toast(msg){
-      const t = document.createElement('div');
-      t.textContent = msg; t.style.cssText = `
-        position:fixed; left:50%; bottom: calc(env(safe-area-inset-bottom) + 90px);
-        transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; padding:10px 14px; border-radius:14px; font-size:12px; z-index:9999; box-shadow:var(--shadow)`;
-      document.body.appendChild(t);
-      setTimeout(()=> t.remove(), 1200);
+      },1000);
     }
 
-    // 초기화
-    (function init(){
-      const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light':'dark');
-      setTheme(savedTheme);
-      render();
-      renderHistory();
-      // iOS 주소창 여백 최소화
-      document.body.style.minHeight = window.innerHeight + 'px';
-      window.addEventListener('resize', ()=>{
-        document.body.style.minHeight = window.innerHeight + 'px';
-      });
-    })();
+    function end(){
+      active = false;
+      clearInterval(timer);
+      game.querySelectorAll('.target').forEach(t=>t.remove());
+      alert(`게임 종료!\n점수: ${score}`);
+    }
+
+    startBtn.addEventListener('click', start);
   </script>
 </body>
 </html>
